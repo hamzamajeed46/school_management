@@ -227,22 +227,33 @@ class StudentProfile(models.Model):
         else:
             return False, "Already enrolled in this subject"
     
+    
     def unenroll_from_subject(self, subject):
         """Unenroll student from a subject"""
         try:
-            enrollment = self.enrollments.get(subject=subject, is_active=True)
+            # Find the enrollment record
+            enrollment = StudentSubjectEnrollment.objects.filter(
+                student=self, 
+                subject=subject, 
+                is_active=True
+            ).first()
+            
+            if not enrollment:
+                return False, "You are not enrolled in this subject"
             
             # Check if subject is mandatory
             if subject.is_mandatory:
-                return False, "Cannot unenroll from mandatory subject"
+                return False, "Cannot unenroll from mandatory subjects"
             
-            enrollment.is_active = False
-            enrollment.save()
-            return True, "Successfully unenrolled from subject"
+            # Delete the enrollment record (or set is_active=False if you want to keep history)
+            enrollment.delete()
+            # Alternative: enrollment.is_active = False; enrollment.save()
             
-        except StudentSubjectEnrollment.DoesNotExist:
-            return False, "Not enrolled in this subject"
-
+            return True, f"Successfully unenrolled from {subject.name}"
+            
+        except Exception as e:
+            return False, f"Error during unenrollment: {str(e)}"
+        
 class TeacherProfile(models.Model):
     """Extended profile for teacher users"""
     

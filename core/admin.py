@@ -126,6 +126,8 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         return obj.user.get_full_name() or obj.user.username
     get_teacher_name.short_description = 'Teacher Name'
 
+
+
 @admin.register(StudentSubjectEnrollment)
 class StudentSubjectEnrollmentAdmin(admin.ModelAdmin):
     """Admin interface for StudentSubjectEnrollment model"""
