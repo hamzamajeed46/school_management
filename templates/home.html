@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - School Management System{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fas fa-graduation-cap"></i> School Management System
+                </h1>
+                <p class="lead mb-4">
+                    A comprehensive platform for managing students, teachers, classes, and academic activities. 
+                    Streamline your educational institution with our modern management solution.
+                </p>
+                
+                {% if not user.is_authenticated %}
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'users:login' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="{% url 'users:register' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                </div>
+                {% else %}
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'users:dashboard' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-dashboard"></i> Go to Dashboard
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-lg-6 text-center">
+                <i class="fas fa-school display-1 opacity-75"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 fw-bold">Key Features</h2>
+                <p class="lead text-muted">Everything you need to manage your educational institution</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <!-- Admin Features -->
+            <div class="col-lg-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-danger text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-user-shield fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold text-danger">Admin Management</h4>
+                        <p class="text-muted">
+                            Complete control over users, classes, subjects, and system settings. 
+                            Manage roles and permissions efficiently.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Teacher Features -->
+            <div class="col-lg-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold text-success">Teacher Tools</h4>
+                        <p class="text-muted">
+                            Manage subjects, track student attendance, assign grades, 
+                            and monitor academic progress seamlessly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Student Features -->
+            <div class="col-lg-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="feature-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-user-graduate fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold text-primary">Student Portal</h4>
+                        <p class="text-muted">
+                            Enroll in subjects, view grades and attendance, 
+                            access academic records and performance analytics.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Access Section -->
+{% if not user.is_authenticated %}
+<section class="bg-light py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-12">
+                <h3 class="fw-bold mb-4">Get Started Today</h3>
+                <p class="lead text-muted mb-4">
+                    Join our school management platform and experience streamlined education administration
+                </p>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <a href="{% url 'users:login' %}" class="btn btn-primary btn-lg w-100">
+                                    <i class="fas fa-sign-in-alt"></i> 
+                                    <div class="d-block">
+                                        <strong>Login</strong>
+                                        <small class="d-block">Access your account</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'users:register' %}" class="btn btn-outline-primary btn-lg w-100">
+                                    <i class="fas fa-user-plus"></i> 
+                                    <div class="d-block">
+                                        <strong>Register</strong>
+                                        <small class="d-block">Create new account</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Registration is typically handled by administrators. Contact your school admin for access.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

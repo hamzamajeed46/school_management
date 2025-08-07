@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - School Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2><i class="fas fa-user-graduate"></i> Student Dashboard</h2>
+                        <p class="text-muted mb-0">Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+                        {% if student_profile.class_assigned %}
+                            <small class="badge bg-primary">{{ student_profile.class_assigned.name }}</small>
+                            <small class="text-muted">Student ID: {{ student_profile.student_id }}</small>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-primary fs-6">Student</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-book fa-2x mb-2"></i>
+                        <h4>{{ total_enrolled }}/{{ max_subjects }}</h4>
+                        <p class="mb-0">Enrolled Subjects</p>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-light" data-width="{{ enrollment_percentage }}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                        <h4>0%</h4>
+                        <p class="mb-0">Attendance</p>
+                        <small>Coming Soon</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                        <h4>-</h4>
+                        <p class="mb-0">Avg Grade</p>
+                        <small>Coming Soon</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                        <h4>{{ available_subjects|length }}</h4>
+                        <p class="mb-0">Available Subjects</p>
+                        <small>Ready to Enroll</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- My Enrolled Subjects -->
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-book"></i> My Enrolled Subjects</h5>
+                        <a href="{% url 'students:subject_enrollment' %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-cog"></i> Manage Enrollment
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if enrolled_subjects %}
+                            <div class="row">
+                                {% for subject in enrolled_subjects %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-0">{{ subject.name }}</h6>
+                                                {% if subject.is_mandatory %}
+                                                    <span class="badge bg-primary">Required</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Optional</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="card-text">
+                                                <small class="text-muted d-block">Code: {{ subject.code }}</small>
+                                                <small class="text-muted d-block">
+                                                    Teacher: {{ subject.teacher.user.get_full_name|default:subject.teacher.user.username }}
+                                                </small>
+                                                <small class="text-muted d-block">Credits: {{ subject.credits }}</small>
+                                            </p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">{{ subject.get_enrolled_students_count }} students enrolled</small>
+                                                {% if not subject.is_mandatory %}
+                                                    <form method="post" action="{% url 'students:unenroll_subject' subject.id %}" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                                onclick="return confirm('Are you sure you want to unenroll from {{ subject.name }}?')">
+                                                            <i class="fas fa-minus"></i> Unenroll
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Subjects Enrolled</h5>
+                                <p class="text-muted">You haven't enrolled in any subjects yet.</p>
+                                <a href="{% url 'students:subject_enrollment' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Enroll in Subjects
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Available Subjects for Enrollment -->
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus-circle"></i> Available Subjects</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                        {% if available_subjects %}
+                            {% if can_enroll_more %}
+                                {% for subject in available_subjects|slice:":5" %}
+                                <div class="border-bottom pb-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ subject.name }}</h6>
+                                            <small class="text-muted d-block">{{ subject.code }}</small>
+                                            <small class="text-muted d-block">Credits: {{ subject.credits }}</small>
+                                            {% if subject.is_mandatory %}
+                                                <span class="badge bg-primary">Required</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Optional</span>
+                                            {% endif %}
+                                        </div>
+                                        <form method="post" action="{% url 'students:enroll_subject' subject.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-plus"></i> Enroll
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                
+                                {% if available_subjects|length > 5 %}
+                                    <div class="text-center">
+                                        <a href="{% url 'students:subject_enrollment' %}" class="btn btn-outline-primary btn-sm">
+                                            View All {{ available_subjects|length }} Available Subjects
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    You've reached the maximum number of subjects ({{ max_subjects }}).
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                <p class="text-muted mb-0">All available subjects enrolled!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'students:subject_enrollment' %}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-cog"></i> Manage Subjects
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <button class="btn btn-outline-secondary w-100" disabled>
+                                    <i class="fas fa-calendar-check"></i> View Attendance
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <button class="btn btn-outline-info w-100" disabled>
+                                    <i class="fas fa-chart-bar"></i> View Grades
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <button class="btn btn-outline-success w-100" disabled>
+                                    <i class="fas fa-calendar"></i> View Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set progress bar widths dynamically
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBars = document.querySelectorAll('.progress-bar[data-width]');
+    progressBars.forEach(bar => {
+        const width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    });
+});
+</script>
+{% endblock %}

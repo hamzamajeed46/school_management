@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Subject Enrollment - School Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-cog"></i> Subject Enrollment Management</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'students:student_dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Subject Enrollment</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-primary fs-6">{{ current_count }}/{{ max_subjects }} Subjects</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enrollment Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-1">Enrollment Progress</h5>
+                            <p class="text-muted mb-2">You have enrolled in {{ current_count }} out of {{ max_subjects }} maximum allowed subjects.</p>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-primary" data-width="{% widthratio current_count max_subjects 100 %}"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if current_count < max_subjects %}
+                                <span class="badge bg-success">Can enroll in {{ max_subjects|add:"-"|add:current_count }} more subjects</span>
+                            {% else %}
+                                <span class="badge bg-warning">Maximum subjects reached</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Currently Enrolled Subjects -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-check-circle"></i> Enrolled Subjects ({{ current_count }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if enrolled_subjects %}
+                        <div class="list-group list-group-flush">
+                            {% for subject in enrolled_subjects %}
+                            <div class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ subject.name }}</h6>
+                                    <p class="mb-1 text-muted">{{ subject.code }} • {{ subject.credits }} Credits</p>
+                                    <small class="text-muted">
+                                        Teacher: {{ subject.teacher.user.get_full_name|default:subject.teacher.user.username }}
+                                    </small>
+                                    <div class="mt-2">
+                                        {% if subject.is_mandatory %}
+                                            <span class="badge bg-primary">Required</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Optional</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="ms-3">
+                                    {% if not subject.is_mandatory %}
+                                        <form method="post" action="{% url 'students:unenroll_subject' subject.id %}" onsubmit="return confirm('Are you sure you want to unenroll from {{ subject.name }}?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-minus"></i> Unenroll
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted small">Required</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Subjects Enrolled</h5>
+                            <p class="text-muted">Start by enrolling in subjects from the available list.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Available Subjects for Enrollment -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-plus-circle"></i> Available Subjects ({{ available_subjects|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_subjects %}
+                        {% if current_count < max_subjects %}
+                            <div class="list-group list-group-flush">
+                                {% for subject in available_subjects %}
+                                <div class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ subject.name }}</h6>
+                                        <p class="mb-1 text-muted">{{ subject.code }} • {{ subject.credits }} Credits</p>
+                                        <small class="text-muted">
+                                            Teacher: {{ subject.teacher.user.get_full_name|default:subject.teacher.user.username }}
+                                        </small>
+                                        {% if subject.description %}
+                                            <p class="mb-1 small text-muted">{{ subject.description|truncatechars:100 }}</p>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            {% if subject.is_mandatory %}
+                                                <span class="badge bg-primary">Required</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Optional</span>
+                                            {% endif %}
+                                            <small class="text-muted">• {{ subject.get_enrolled_students_count }} students enrolled</small>
+                                        </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        <form method="post" action="{% url 'students:enroll_subject' subject.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-plus"></i> Enroll
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                <strong>Maximum Subjects Reached</strong><br>
+                                You have enrolled in the maximum number of subjects ({{ max_subjects }}). 
+                                To enroll in a new subject, you must first unenroll from an optional subject.
+                            </div>
+                            
+                            <!-- Still show available subjects but disabled -->
+                            <div class="list-group list-group-flush opacity-50">
+                                {% for subject in available_subjects|slice:":3" %}
+                                <div class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ subject.name }}</h6>
+                                        <p class="mb-1 text-muted">{{ subject.code }} • {{ subject.credits }} Credits</p>
+                                        <small class="text-muted">
+                                            Teacher: {{ subject.teacher.user.get_full_name|default:subject.teacher.user.username }}
+                                        </small>
+                                    </div>
+                                    <div class="ms-3">
+                                        <button class="btn btn-sm btn-secondary" disabled>
+                                            <i class="fas fa-lock"></i> Locked
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5 class="text-success">All Subjects Enrolled!</h5>
+                            <p class="text-muted">You have enrolled in all available subjects for your class.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enrollment Rules -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-light">
+                    <h6><i class="fas fa-info-circle"></i> Enrollment Rules & Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-info">Enrollment Limits:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Maximum {{ max_subjects }} subjects allowed</li>
+                                <li><i class="fas fa-check text-success"></i> No limit on mandatory subjects</li>
+                                <li><i class="fas fa-check text-success"></i> Can enroll/unenroll anytime during enrollment period</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">Important Notes:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-exclamation-triangle text-warning"></i> Required subjects cannot be unenrolled</li>
+                                <li><i class="fas fa-info-circle text-info"></i> Contact administrator for class changes</li>
+                                <li><i class="fas fa-clock text-muted"></i> Changes take effect immediately</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add some interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress bar widths dynamically
+    const progressBars = document.querySelectorAll('.progress-bar[data-width]');
+    progressBars.forEach(bar => {
+        const width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    });
+    
+    // Add confirmation for enrollment actions
+    const enrollForms = document.querySelectorAll('form[action*="enroll"]');
+    enrollForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const subjectName = this.closest('.list-group-item').querySelector('h6').textContent;
+            if (!confirm(`Are you sure you want to enroll in ${subjectName}?`)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

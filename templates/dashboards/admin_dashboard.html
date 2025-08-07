@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - School Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-user-shield"></i> Admin Dashboard</h2>
+                <span class="badge bg-danger fs-6">Administrator</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- User Management -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-users"></i> User Management</h5>
+                </div>
+                <div class="card-body">
+                    <p>Manage all users in the system</p>
+                    <a href="{% url 'users:register' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Add New User
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Class Management -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-chalkboard"></i> Class Management</h5>
+                </div>
+                <div class="card-body">
+                    <p>Create and manage classes</p>
+                    <button class="btn btn-success" disabled>
+                        <i class="fas fa-plus"></i> Add Class (Coming Soon)
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Subject Management -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-book"></i> Subject Management</h5>
+                </div>
+                <div class="card-body">
+                    <p>Manage subjects and assignments</p>
+                    <button class="btn btn-info" disabled>
+                        <i class="fas fa-plus"></i> Add Subject (Coming Soon)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> System Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h3 class="text-primary">0</h3>
+                            <p>Total Students</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3 class="text-success">0</h3>
+                            <p>Total Teachers</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3 class="text-info">0</h3>
+                            <p>Total Classes</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3 class="text-warning">0</h3>
+                            <p>Total Subjects</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
