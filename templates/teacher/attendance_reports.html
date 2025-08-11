@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Reports - School Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-chart-bar"></i> Attendance Reports</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'teacher:teacher_dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Attendance Reports</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="text-end">
+                    <a href="{% url 'teacher:attendance_management' %}" class="btn btn-primary">
+                        <i class="fas fa-clipboard-check"></i> Mark Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Subject Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter"></i> Select Subject</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-8">
+                            <label for="subject" class="form-label">Subject</label>
+                            <select name="subject" id="subject" class="form-select" onchange="this.form.submit()">
+                                <option value="">Select a subject...</option>
+                                {% for subject in subjects %}
+                                <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == selected_subject_id %}selected{% endif %}>
+                                    {{ subject.name }} ({{ subject.code }}) - {{ subject.class_assigned.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-chart-line"></i> Generate Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Statistics -->
+    {% if selected_subject and student_stats %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-chart-pie"></i> Attendance Statistics - {{ selected_subject.name }}</h5>
+                    <div>
+                        <span class="badge bg-primary">{{ selected_subject.class_assigned.name }}</span>
+                        <span class="badge bg-info">{{ student_stats|length }} Students</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{% widthratio student_stats|length student_stats|length 100 %}%</h4>
+                                    <p class="mb-0">Students with 80%+ Attendance</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h4>0%</h4>
+                                    <p class="mb-0">Students with 60-80% Attendance</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h4>0%</h4>
+                                    <p class="mb-0">Students with &lt;60% Attendance</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ student_stats.0.total_classes|default:0 }}</h4>
+                                    <p class="mb-0">Total Classes Conducted</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Student Report -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="attendanceTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Student Name</th>
+                                    <th>Student ID</th>
+                                    <th>Total Classes</th>
+                                    <th>Present</th>
+                                    <th>Absent</th>
+                                    <th>Attendance %</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in student_stats %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                {{ stat.student.user.first_name|first|default:stat.student.user.username|first }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ stat.student.user.get_full_name|default:stat.student.user.username }}</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ stat.student.student_id }}</td>
+                                    <td>{{ stat.total_classes }}</td>
+                                    <td>{{ stat.present_classes }}</td>
+                                    <td>{{ stat.absent_classes }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">{{ stat.attendance_percentage }}%</span>
+                                            <div class="progress flex-grow-1" style="height: 8px;">
+                                                <div class="progress-bar 
+                                                    {% if stat.attendance_percentage >= 80 %}bg-success
+                                                    {% elif stat.attendance_percentage >= 60 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    data-width="{{ stat.attendance_percentage }}"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if stat.attendance_percentage >= 80 %}
+                                            <span class="badge bg-success">Excellent</span>
+                                        {% elif stat.attendance_percentage >= 75 %}
+                                            <span class="badge bg-info">Good</span>
+                                        {% elif stat.attendance_percentage >= 60 %}
+                                            <span class="badge bg-warning">Warning</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Critical</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails('{{ stat.student.id }}')">
+                                            <i class="fas fa-eye"></i> Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Export Options -->
+                    <div class="row mt-4">
+                        <div class="col-12 text-center">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success" onclick="exportReport('excel')">
+                                    <i class="fas fa-file-excel"></i> Export to Excel
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
+                                    <i class="fas fa-file-pdf"></i> Export to PDF
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="printReport()">
+                                    <i class="fas fa-print"></i> Print Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif selected_subject %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>No Data Available:</strong> No attendance records found for {{ selected_subject.name }}. Start marking attendance to generate reports.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-secondary">
+                <i class="fas fa-hand-point-up"></i>
+                <strong>Select Subject:</strong> Choose a subject above to view detailed attendance reports and statistics.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.avatar-sm {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+@media print {
+    .btn, .breadcrumb, .card-header .badge {
+        display: none !important;
+    }
+}
+</style>
+
+<script>
+function viewDetails(studentId) {
+    // This would open a modal or navigate to detailed view
+    alert('Feature coming soon: Detailed attendance history for student ID ' + studentId);
+}
+
+function exportReport(format) {
+    // This would trigger export functionality
+    alert('Export to ' + format.toUpperCase() + ' feature coming soon!');
+}
+
+function printReport() {
+    window.print();
+}
+
+// Add search functionality to the table
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress bar widths dynamically
+    const progressBars = document.querySelectorAll('.progress-bar[data-width]');
+    progressBars.forEach(bar => {
+        const width = bar.getAttribute('data-width');
+        bar.style.width = width + '%';
+    });
+    
+    // Simple table search (you can enhance this with a proper search library)
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'form-control mb-3';
+    searchInput.placeholder = 'Search students...';
+    
+    const table = document.getElementById('attendanceTable');
+    if (table) {
+        table.parentNode.insertBefore(searchInput, table);
+        
+        searchInput.addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

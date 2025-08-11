@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Management - School Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-clipboard-check"></i> Attendance Management</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'teacher:teacher_dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Attendance Management</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="text-end">
+                    <a href="{% url 'teacher:attendance_reports' %}" class="btn btn-info">
+                        <i class="fas fa-chart-bar"></i> View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Subject and Date Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter"></i> Select Subject & Date</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="subject" class="form-label">Subject</label>
+                            <select name="subject" id="subject" class="form-select" onchange="this.form.submit()">
+                                <option value="">Select a subject...</option>
+                                {% for subject in subjects %}
+                                <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == selected_subject_id %}selected{% endif %}>
+                                    {{ subject.name }} ({{ subject.code }}) - {{ subject.class_assigned.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}" onchange="this.form.submit()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Load
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Marking Form -->
+    {% if selected_subject and student_attendance %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-users"></i> Mark Attendance - {{ selected_subject.name }}</h5>
+                    <div>
+                        <span class="badge bg-primary">{{ selected_subject.class_assigned.name }}</span>
+                        <span class="badge bg-info">{{ attendance_date }}</span>
+                        {% if attendance_already_marked %}
+                            <span class="badge bg-warning">Already Marked</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'teacher:mark_attendance' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="subject_id" value="{{ selected_subject.id }}">
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        
+                        <!-- Bulk Actions -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-success" onclick="markAll('present')">
+                                        <i class="fas fa-check"></i> Mark All Present
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="markAll('absent')">
+                                        <i class="fas fa-times"></i> Mark All Absent
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="text-muted">{{ student_attendance|length }} students enrolled</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Student List -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Student</th>
+                                        <th>Student ID</th>
+                                        <th class="text-center">Present</th>
+                                        <th class="text-center">Late</th>
+                                        <th class="text-center">Absent</th>
+                                        <th class="text-center">Excused</th>
+                                        <th>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in student_attendance %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                    {{ item.student.user.first_name|first|default:item.student.user.username|first }}
+                                                </div>
+                                                <div>
+                                                    <strong>{{ item.student.user.get_full_name|default:item.student.user.username }}</strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ item.student.student_id }}</td>
+                                        <td class="text-center">
+                                            <input type="radio" name="attendance_{{ item.student.id }}" value="present" 
+                                                   {% if item.status == 'present' %}checked{% endif %}
+                                                   class="form-check-input attendance-radio">
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="radio" name="attendance_{{ item.student.id }}" value="late" 
+                                                   {% if item.status == 'late' %}checked{% endif %}
+                                                   class="form-check-input attendance-radio">
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="radio" name="attendance_{{ item.student.id }}" value="absent" 
+                                                   {% if item.status == 'absent' %}checked{% endif %}
+                                                   class="form-check-input attendance-radio">
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="radio" name="attendance_{{ item.student.id }}" value="excused" 
+                                                   {% if item.status == 'excused' %}checked{% endif %}
+                                                   class="form-check-input attendance-radio">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="remarks_{{ item.student.id }}" 
+                                                   value="{% if item.attendance %}{{ item.attendance.remarks|default:'' }}{% endif %}"
+                                                   class="form-control form-control-sm" placeholder="Optional notes...">
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-save"></i> 
+                                    {% if attendance_already_marked %}Update Attendance{% else %}Save Attendance{% endif %}
+                                </button>
+                                <a href="{% url 'teacher:teacher_dashboard' %}" class="btn btn-secondary btn-lg ms-2">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif selected_subject %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>No Students Enrolled:</strong> There are no students enrolled in {{ selected_subject.name }} for {{ selected_subject.class_assigned.name }}.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-secondary">
+                <i class="fas fa-hand-point-up"></i>
+                <strong>Get Started:</strong> Select a subject and date above to mark attendance for your students.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.avatar-sm {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.attendance-radio {
+    transform: scale(1.2);
+}
+
+.table th {
+    border-top: none;
+}
+</style>
+
+<script>
+function markAll(status) {
+    const radios = document.querySelectorAll(`input[type="radio"][value="${status}"]`);
+    radios.forEach(radio => {
+        radio.checked = true;
+    });
+}
+
+// Add row highlighting on radio selection
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('.attendance-radio');
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Remove existing highlights
+            const row = this.closest('tr');
+            row.classList.remove('table-success', 'table-warning', 'table-danger', 'table-info');
+            
+            // Add appropriate highlight
+            switch(this.value) {
+                case 'present':
+                    row.classList.add('table-success');
+                    break;
+                case 'late':
+                    row.classList.add('table-warning');
+                    break;
+                case 'absent':
+                    row.classList.add('table-danger');
+                    break;
+                case 'excused':
+                    row.classList.add('table-info');
+                    break;
+            }
+        });
+        
+        // Initialize existing selections
+        if (radio.checked) {
+            radio.dispatchEvent(new Event('change'));
+        }
+    });
+});
+</script>
+{% endblock %}

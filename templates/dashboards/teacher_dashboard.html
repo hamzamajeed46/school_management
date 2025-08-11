@@ -4,83 +4,259 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-chalkboard-teacher"></i> Teacher Dashboard</h2>
-                <span class="badge bg-success fs-6">Teacher</span>
-            </div>
+    {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
         </div>
-    </div>
-    
-    <div class="row">
-        <!-- My Subjects -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5><i class="fas fa-book"></i> My Subjects</h5>
-                </div>
-                <div class="card-body">
-                    <p>Manage your assigned subjects</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> No subjects assigned yet
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2><i class="fas fa-chalkboard-teacher"></i> Welcome, {{ user.get_full_name|default:user.username }}!</h2>
+                        <p class="text-muted">Teacher Dashboard - {{ teacher_profile.specialization }}</p>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Attendance Management -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-warning text-white">
-                    <h5><i class="fas fa-calendar-check"></i> Attendance</h5>
-                </div>
-                <div class="card-body">
-                    <p>Mark student attendance</p>
-                    <button class="btn btn-warning" disabled>
-                        <i class="fas fa-check"></i> Mark Attendance (Coming Soon)
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <!-- Grade Management -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-clipboard-list"></i> Grades</h5>
-                </div>
-                <div class="card-body">
-                    <p>Assign grades to students</p>
-                    <button class="btn btn-success" disabled>
-                        <i class="fas fa-plus"></i> Add Grades (Coming Soon)
-                    </button>
+                    <div class="text-end">
+                        <span class="badge bg-success fs-6">{{ teacher_profile.get_qualification_display }}</span>
+                    </div>
                 </div>
             </div>
         </div>
         
         <!-- Quick Stats -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="fas fa-chart-bar"></i> Quick Stats</h5>
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-book fa-2x mb-2"></i>
+                        <h4>{{ total_subjects }}</h4>
+                        <p class="mb-0">Assigned Subjects</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <h4 class="text-primary">0</h4>
-                            <p>My Subjects</p>
-                        </div>
-                        <div class="col-6">
-                            <h4 class="text-success">0</h4>
-                            <p>My Students</p>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <h4>{{ total_students }}</h4>
+                        <p class="mb-0">Total Students</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                        <h4>{{ teacher_profile.experience_years }}</h4>
+                        <p class="mb-0">Years Experience</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clipboard-check fa-2x mb-2"></i>
+                        <h4>{{ recent_attendance|length }}</h4>
+                        <p class="mb-0">Recent Records</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'teacher:attendance_management' %}" class="btn btn-primary btn-lg w-100">
+                                    <i class="fas fa-clipboard-check"></i> Mark Attendance
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'teacher:grade_management' %}" class="btn btn-success btn-lg w-100">
+                                    <i class="fas fa-star"></i> Manage Grades
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="{% url 'teacher:attendance_reports' %}" class="btn btn-info btn-lg w-100">
+                                    <i class="fas fa-chart-bar"></i> View Reports
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/admin/" class="btn btn-secondary btn-lg w-100" target="_blank">
+                                    <i class="fas fa-cog"></i> Admin Panel
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+        
+        <div class="row">
+            <!-- Today's Attendance Overview -->
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-calendar-day"></i> Today's Attendance Overview</h5>
+                        <small class="text-muted">{{ "now"|date:"F d, Y" }}</small>
+                    </div>
+                    <div class="card-body">
+                        {% if attendance_overview %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Enrolled Students</th>
+                                            <th>Attendance Marked</th>
+                                            <th>Present Today</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in attendance_overview %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ item.subject.name }}</strong><br>
+                                                <small class="text-muted">{{ item.subject.code }}</small>
+                                            </td>
+                                            <td>{{ item.enrolled_students }}</td>
+                                            <td>{{ item.attendance_marked }}</td>
+                                            <td>{{ item.present_count }}</td>
+                                            <td>
+                                                {% if item.attendance_pending > 0 %}
+                                                    <span class="badge bg-warning">{{ item.attendance_pending }} Pending</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Complete</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'teacher:attendance_management' %}?subject={{ item.subject.id }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-clipboard-check"></i> Mark
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-chalkboard fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Subjects Assigned</h5>
+                                <p class="text-muted">Contact administrator to get subjects assigned.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Attendance Records -->
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i> Recent Records</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_attendance %}
+                            <div class="list-group list-group-flush">
+                                {% for record in recent_attendance %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ record.student.user.get_full_name|default:record.student.user.username }}</h6>
+                                            <p class="mb-1 small">{{ record.subject.name }}</p>
+                                            <small class="text-muted">{{ record.date }}</small>
+                                        </div>
+                                        <div>
+                                            {% if record.status == 'present' %}
+                                                <span class="badge bg-success">Present</span>
+                                            {% elif record.status == 'late' %}
+                                                <span class="badge bg-warning">Late</span>
+                                            {% elif record.status == 'excused' %}
+                                                <span class="badge bg-info">Excused</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Absent</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="{% url 'teacher:attendance_reports' %}" class="btn btn-sm btn-outline-primary">
+                                    View All Records
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clipboard fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No attendance records yet.</p>
+                                <a href="{% url 'teacher:attendance_management' %}" class="btn btn-sm btn-primary">
+                                    Start Marking Attendance
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assigned Subjects -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-books"></i> Your Assigned Subjects</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if assigned_subjects %}
+                            <div class="row">
+                                {% for subject in assigned_subjects %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ subject.name }}</h6>
+                                            <p class="card-text">
+                                                <strong>Code:</strong> {{ subject.code }}<br>
+                                                <strong>Class:</strong> {{ subject.class_assigned.name }}<br>
+                                                <strong>Credits:</strong> {{ subject.credits }}<br>
+                                                <strong>Students:</strong> {{ subject.get_enrolled_students_count }}
+                                            </p>
+                                            <div class="d-grid gap-2">
+                                                <a href="{% url 'teacher:attendance_management' %}?subject={{ subject.id }}" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-clipboard-check"></i> Mark Attendance
+                                                </a>
+                                                <a href="{% url 'teacher:grade_management' %}?subject={{ subject.id }}" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-star"></i> Manage Grades
+                                                </a>
+                                                <a href="{% url 'teacher:attendance_reports' %}?subject={{ subject.id }}" class="btn btn-outline-info btn-sm">
+                                                    <i class="fas fa-chart-line"></i> View Reports
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-chalkboard fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Subjects Assigned</h5>
+                                <p class="text-muted">Contact administrator to get subjects assigned to you.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

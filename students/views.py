@@ -34,6 +34,14 @@ def student_dashboard(request):
     max_subjects = 8  # Maximum allowed subjects
     can_enroll_more = total_enrolled < max_subjects
     
+    # Get attendance summary
+    attendance_summary = student_profile.get_attendance_summary()
+    subject_wise_attendance = student_profile.get_subject_wise_attendance()
+    
+    # Get grade summary
+    overall_gpa = student_profile.get_overall_gpa()
+    subject_wise_grades = student_profile.get_subject_wise_grades()
+    
     context = {
         'user': request.user,
         'student_profile': student_profile,
@@ -44,6 +52,10 @@ def student_dashboard(request):
         'max_subjects': max_subjects,
         'can_enroll_more': can_enroll_more,
         'enrollment_percentage': round((total_enrolled / max_subjects) * 100, 1) if max_subjects > 0 else 0,
+        'attendance_summary': attendance_summary,
+        'subject_wise_attendance': subject_wise_attendance,
+        'overall_gpa': overall_gpa,
+        'subject_wise_grades': subject_wise_grades,
     }
     return render(request, 'dashboards/student_dashboard.html', context)
 
@@ -140,3 +152,82 @@ def ajax_enroll_subject(request, subject_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+@login_required
+@user_passes_test(is_student)
+def view_grades(request):
+    """View grades for all subjects"""
+    try:
+        student_profile = request.user.student_profile
+    except:
+        context = {
+            'error': 'Student profile not found. Please contact administrator.',
+            'user': request.user,
+            'page_title': 'View Grades',
+        }
+        return render(request, 'students/view_grades.html', context)
+    
+    # Get grade summary
+    subject_wise_grades = student_profile.get_subject_wise_grades()
+    overall_gpa = student_profile.get_overall_gpa()
+    
+    # Get all published grades
+    all_grades = student_profile.grades.filter(
+        is_published=True
+    ).select_related('subject').order_by('-date_assigned')
+    
+    context = {
+        'user': request.user,
+        'student_profile': student_profile,
+        'page_title': 'My Grades',
+        'subject_wise_grades': subject_wise_grades,
+        'overall_gpa': overall_gpa,
+        'all_grades': all_grades,
+    }
+    
+    return render(request, 'students/view_grades.html', context)
+
+@login_required
+@user_passes_test(is_student)
+def subject_grades(request, subject_id):
+    """View grades for a specific subject"""
+    try:
+        student_profile = request.user.student_profile
+        subject = get_object_or_404(Subject, id=subject_id)
+        
+        # Check if student is enrolled in this subject
+        if not student_profile.enrollments.filter(subject=subject, is_active=True).exists():
+            messages.error(request, 'You are not enrolled in this subject.')
+            return redirect('students:view_grades')
+        
+        # Get grades for this subject
+        subject_grades = student_profile.grades.filter(
+            subject=subject,
+            is_published=True
+        ).order_by('-date_assigned')
+        
+        # Calculate statistics
+        if subject_grades.exists():
+            from django.db.models import Avg, Max, Min
+            stats = subject_grades.aggregate(
+                avg=Avg('percentage'),
+                max=Max('percentage'),
+                min=Min('percentage')
+            )
+        else:
+            stats = {'avg': 0, 'max': 0, 'min': 0}
+        
+        context = {
+            'user': request.user,
+            'student_profile': student_profile,
+            'page_title': f'Grades - {subject.name}',
+            'subject': subject,
+            'subject_grades': subject_grades,
+            'stats': stats,
+        }
+        
+        return render(request, 'students/subject_grades.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('students:view_grades')
