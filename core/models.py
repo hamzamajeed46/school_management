@@ -253,6 +253,97 @@ class StudentProfile(models.Model):
             
         except Exception as e:
             return False, f"Error during unenrollment: {str(e)}"
+    
+    def get_attendance_summary(self):
+        """Get attendance summary for the student"""
+        from django.db.models import Count, Q
+        from datetime import date, timedelta
+        
+        # Get attendance for last 30 days
+        thirty_days_ago = date.today() - timedelta(days=30)
+        
+        total_classes = self.attendance_records.filter(date__gte=thirty_days_ago).count()
+        present_classes = self.attendance_records.filter(
+            date__gte=thirty_days_ago,
+            status__in=['present', 'late']
+        ).count()
+        
+        attendance_percentage = round((present_classes / total_classes * 100), 1) if total_classes > 0 else 0
+        
+        return {
+            'total_classes': total_classes,
+            'present_classes': present_classes,
+            'absent_classes': total_classes - present_classes,
+            'attendance_percentage': attendance_percentage
+        }
+    
+    def get_subject_wise_attendance(self):
+        """Get attendance summary by subject"""
+        from django.db.models import Count, Q
+        
+        attendance_data = []
+        enrolled_subjects = self.get_enrolled_subjects()
+        
+        for subject in enrolled_subjects:
+            total = self.attendance_records.filter(subject=subject).count()
+            present = self.attendance_records.filter(
+                subject=subject,
+                status__in=['present', 'late']
+            ).count()
+            
+            percentage = round((present / total * 100), 1) if total > 0 else 0
+            
+            attendance_data.append({
+                'subject': subject,
+                'total_classes': total,
+                'present_classes': present,
+                'absent_classes': total - present,
+                'attendance_percentage': percentage
+            })
+        
+        return attendance_data
+    
+    def get_overall_gpa(self):
+        """Calculate overall GPA for the student"""
+        from django.db.models import Avg
+        
+        # Get all published grades
+        published_grades = self.grades.filter(is_published=True)
+        if not published_grades.exists():
+            return 0.0
+        
+        # Calculate average percentage
+        avg_percentage = published_grades.aggregate(
+            avg=Avg('percentage')
+        )['avg']
+        
+        return round(avg_percentage / 25, 2) if avg_percentage else 0.0  # Convert to 4.0 scale
+    
+    def get_subject_wise_grades(self):
+        """Get grades summary by subject"""
+        grades_data = []
+        enrolled_subjects = self.get_enrolled_subjects()
+        
+        for subject in enrolled_subjects:
+            subject_grades = self.grades.filter(
+                subject=subject,
+                is_published=True
+            ).order_by('-date_assigned')
+            
+            if subject_grades.exists():
+                avg_percentage = subject_grades.aggregate(
+                    avg=models.Avg('percentage')
+                )['avg']
+                
+                grades_data.append({
+                    'subject': subject,
+                    'grades': subject_grades,
+                    'average_percentage': round(avg_percentage, 1) if avg_percentage else 0,
+                    'total_assignments': subject_grades.count(),
+                    'latest_grade': subject_grades.first() if subject_grades else None
+                })
+        
+        return grades_data
         
 class TeacherProfile(models.Model):
     """Extended profile for teacher users"""
@@ -328,6 +419,53 @@ class TeacherProfile(models.Model):
         for subject in subjects:
             total += subject.get_enrolled_students_count()
         return total
+    
+    def get_attendance_overview(self):
+        """Get attendance overview for teacher's subjects"""
+        from django.db.models import Count, Q
+        from datetime import date
+        
+        today = date.today()
+        subjects = self.get_assigned_subjects()
+        
+        overview = []
+        for subject in subjects:
+            enrolled_students = subject.get_enrolled_students_count()
+            today_attendance = subject.attendance_records.filter(date=today).count()
+            present_today = subject.attendance_records.filter(
+                date=today,
+                status__in=['present', 'late']
+            ).count()
+            
+            overview.append({
+                'subject': subject,
+                'enrolled_students': enrolled_students,
+                'attendance_marked': today_attendance,
+                'present_count': present_today,
+                'attendance_pending': enrolled_students - today_attendance
+            })
+        
+        return overview
+    
+    def get_grading_overview(self):
+        """Get grading overview for teacher's subjects"""
+        subjects = self.get_assigned_subjects()
+        grading_data = []
+        
+        for subject in subjects:
+            total_students = subject.get_enrolled_students_count()
+            total_grades = subject.grades.count()
+            pending_grades = subject.grades.filter(is_published=False).count()
+            
+            grading_data.append({
+                'subject': subject,
+                'total_students': total_students,
+                'total_grades': total_grades,
+                'published_grades': total_grades - pending_grades,
+                'pending_grades': pending_grades
+            })
+        
+        return grading_data
 
 class StudentSubjectEnrollment(models.Model):
     """Model to handle student enrollment in subjects"""
@@ -365,3 +503,236 @@ class StudentSubjectEnrollment(models.Model):
     def can_unenroll(self):
         """Check if student can unenroll from this subject"""
         return not self.subject.is_mandatory
+
+
+class Attendance(models.Model):
+    """Model to track student attendance for specific subjects"""
+    
+    ATTENDANCE_CHOICES = [
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused'),
+    ]
+    
+    student = models.ForeignKey(
+        StudentProfile,
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    date = models.DateField(
+        help_text="Date of the class/attendance"
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=ATTENDANCE_CHOICES,
+        default='absent',
+        help_text="Attendance status for the student"
+    )
+    remarks = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional notes about attendance (optional)"
+    )
+    marked_by = models.ForeignKey(
+        'TeacherProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='marked_attendance',
+        help_text="Teacher who marked this attendance"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Attendance Record"
+        verbose_name_plural = "Attendance Records"
+        unique_together = ['student', 'subject', 'date']
+        ordering = ['-date', 'subject', 'student']
+    
+    def __str__(self):
+        return f"{self.student.user.get_full_name()} - {self.subject.name} ({self.date}) - {self.get_status_display()}"
+    
+    @property
+    def is_present(self):
+        """Check if student was present (present or late)"""
+        return self.status in ['present', 'late']
+    
+    @property
+    def is_absent(self):
+        """Check if student was absent"""
+        return self.status in ['absent']
+
+
+class Grade(models.Model):
+    """Model to track student grades for specific subjects"""
+    
+    GRADE_TYPE_CHOICES = [
+        ('assignment', 'Assignment'),
+        ('quiz', 'Quiz'),
+        ('midterm', 'Midterm Exam'),
+        ('final', 'Final Exam'),
+        ('project', 'Project'),
+        ('participation', 'Class Participation'),
+        ('homework', 'Homework'),
+        ('test', 'Test'),
+    ]
+    
+    LETTER_GRADE_CHOICES = [
+        ('A+', 'A+ (97-100)'),
+        ('A', 'A (93-96)'),
+        ('A-', 'A- (90-92)'),
+        ('B+', 'B+ (87-89)'),
+        ('B', 'B (83-86)'),
+        ('B-', 'B- (80-82)'),
+        ('C+', 'C+ (77-79)'),
+        ('C', 'C (73-76)'),
+        ('C-', 'C- (70-72)'),
+        ('D+', 'D+ (67-69)'),
+        ('D', 'D (63-66)'),
+        ('D-', 'D- (60-62)'),
+        ('F', 'F (Below 60)'),
+    ]
+    
+    student = models.ForeignKey(
+        StudentProfile,
+        on_delete=models.CASCADE,
+        related_name='grades'
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+        related_name='grades'
+    )
+    grade_type = models.CharField(
+        max_length=20,
+        choices=GRADE_TYPE_CHOICES,
+        help_text="Type of grade/assessment"
+    )
+    title = models.CharField(
+        max_length=200,
+        help_text="Title of the assignment/test (e.g., 'Math Quiz 1', 'History Essay')"
+    )
+    marks_obtained = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text="Marks obtained by student"
+    )
+    total_marks = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        help_text="Total marks possible"
+    )
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Percentage score (auto-calculated)"
+    )
+    letter_grade = models.CharField(
+        max_length=2,
+        choices=LETTER_GRADE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Letter grade (auto-calculated)"
+    )
+    date_assigned = models.DateField(
+        help_text="Date when assignment was given"
+    )
+    date_submitted = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date when student submitted"
+    )
+    comments = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Teacher's comments/feedback"
+    )
+    graded_by = models.ForeignKey(
+        TeacherProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='grades_assigned',
+        help_text="Teacher who assigned this grade"
+    )
+    is_published = models.BooleanField(
+        default=False,
+        help_text="Whether grade is visible to student"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Grade"
+        verbose_name_plural = "Grades"
+        ordering = ['-date_assigned', 'subject', 'student']
+        unique_together = ['student', 'subject', 'title', 'grade_type']
+    
+    def __str__(self):
+        return f"{self.student.user.get_full_name()} - {self.subject.name} - {self.title} ({self.marks_obtained}/{self.total_marks})"
+    
+    def save(self, *args, **kwargs):
+        """Auto-calculate percentage and letter grade"""
+        if self.marks_obtained is not None and self.total_marks is not None and self.total_marks > 0:
+            self.percentage = round((self.marks_obtained / self.total_marks) * 100, 2)
+            self.letter_grade = self.calculate_letter_grade(self.percentage)
+        super().save(*args, **kwargs)
+    
+    def calculate_letter_grade(self, percentage):
+        """Calculate letter grade based on percentage"""
+        if percentage >= 97:
+            return 'A+'
+        elif percentage >= 93:
+            return 'A'
+        elif percentage >= 90:
+            return 'A-'
+        elif percentage >= 87:
+            return 'B+'
+        elif percentage >= 83:
+            return 'B'
+        elif percentage >= 80:
+            return 'B-'
+        elif percentage >= 77:
+            return 'C+'
+        elif percentage >= 73:
+            return 'C'
+        elif percentage >= 70:
+            return 'C-'
+        elif percentage >= 67:
+            return 'D+'
+        elif percentage >= 63:
+            return 'D'
+        elif percentage >= 60:
+            return 'D-'
+        else:
+            return 'F'
+    
+    @property
+    def is_passing(self):
+        """Check if grade is passing (60% or above)"""
+        return self.percentage >= 60 if self.percentage else False
+    
+    @property
+    def grade_color_class(self):
+        """Get CSS class based on grade performance"""
+        if not self.percentage:
+            return 'text-muted'
+        elif self.percentage >= 90:
+            return 'text-success'
+        elif self.percentage >= 80:
+            return 'text-info'
+        elif self.percentage >= 70:
+            return 'text-warning'
+        elif self.percentage >= 60:
+            return 'text-primary'
+        else:
+            return 'text-danger'
